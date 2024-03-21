@@ -1,6 +1,7 @@
 import requests
 from dataclasses import dataclass
 from typing import Optional
+import panda as pd
 
 
 @dataclass
@@ -39,7 +40,7 @@ def get_data():
     return result
 
 
-def get_location_choices(data_arg):
+def get_hq_location_choices(data_arg):
     location_choices = {}
     city_name = {}
     for column in data_arg['data']['table']['columns']:
@@ -52,11 +53,24 @@ def get_location_choices(data_arg):
     return city_name
 
 
+def office_location_choices(data_arg):
+    locations_choices = {}
+    city_name = {}
+    for column in data_arg['data']['table']['columns']:
+        if column['id'] == 'fldNfzOQ6JtYjwu5P':
+            locations_choices = column['typeOptions']['choices']
+            for loc_id, loc_info in locations_choices.items():
+                city_name[loc_id] = loc_info['name']
+            break
+    return city_name
+
+
 data = get_data()
 
 names = []
 rows = data['data']['table']['rows']
-locations_dict = get_location_choices(data)
+hq_locations_dict = get_hq_location_choices(data)
+office_location_dict = office_location_choices(data)
 investors = []
 for row in rows:
     # Get Cell Values
@@ -66,10 +80,19 @@ for row in rows:
     website = cell_values.get('fldcAWLaMSTa8swPK')
     # Get Hq_location and Other offices
     hq_location_id = cell_values.get('fld9SupEDjIjazlaA')
-    hq_location = locations_dict.get(hq_location_id, 'None')
+    hq_location = hq_locations_dict.get(hq_location_id, 'None')
+
+    offices = []
+    office_location_ids = cell_values.get('fldNfzOQ6JtYjwu5P')
+    if office_location_ids:
+        for office_location_id in office_location_ids:
+            offices.append(office_location_dict.get(office_location_id, 'None'))
+
+
+
 
     # Create Investor dataclass and add it to
-    Investor_item = Investor(name, website, hq_location)
+    Investor_item = Investor(name, website, hq_location, offices)
     investors.append(Investor_item)
 
 print(investors)

@@ -70,6 +70,6 @@ for row in rows:
 
     # Create Investor dataclass and add it to
     Investor_item = Investor(name, website, hq_location)
-    investors.append(Investor_item)d
+    investors.append(Investor_item)
 
 print(investors)

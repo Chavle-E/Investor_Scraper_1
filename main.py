@@ -1,7 +1,7 @@
 import requests
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional
-import panda as pd
+import pandas as pd
 
 
 @dataclass
@@ -9,7 +9,11 @@ class Investor:
     name: str
     website: str
     location: str
+    Sector_Focus: str = None
+    Current_Fund: str = None
     other_offices: Optional[list[str]] = None
+    Type: list[str] = None
+    Stage_Focus: list[str] = None
 
 
 def get_data():
@@ -65,12 +69,39 @@ def office_location_choices(data_arg):
     return city_name
 
 
-data = get_data()
+def get_investor_type(data_arg):
+    type_choices = {}
+    types_def = {}
+    for column in data_arg['data']['table']['columns']:
+        if column['id'] == 'fldVhpJJoBVVtf1Xv':
+            type_choices = column['typeOptions']['choices']
+            for typeID, type_info in type_choices.items():
+                types_def[typeID] = type_info['name']
+            break
+    return types_def
 
+
+def get_stage_focus(data_arg):
+    results = {}
+    stage_focus_def = {}
+    for column in data_arg['data']['table']['columns']:
+        if column['id'] == 'fldbMm6H1J4mUxgwb':
+            results = column['typeOptions']['choices']
+            for StageFocID, StageFocInfo in results.items():
+                stage_focus_def[StageFocID] = StageFocInfo['name']
+            break
+    return stage_focus_def
+
+
+data = get_data()
 names = []
+
 rows = data['data']['table']['rows']
 hq_locations_dict = get_hq_location_choices(data)
 office_location_dict = office_location_choices(data)
+type_id_dict = get_investor_type(data)
+stage_focus_dict = get_stage_focus(data)
+
 investors = []
 for row in rows:
     # Get Cell Values
@@ -87,12 +118,31 @@ for row in rows:
     if office_location_ids:
         for office_location_id in office_location_ids:
             offices.append(office_location_dict.get(office_location_id, 'None'))
+    # Get types of investor
+    types = []
+    type_id = cell_values.get('fldVhpJJoBVVtf1Xv')
+    if type_id:
+        types.append(type_id_dict.get(type_id, 'None'))
+    # Get Stage focuses of each Investor
+    stage_focuses = []
+    stage_focus_ids = cell_values.get('fldbMm6H1J4mUxgwb')
+    if stage_focus_ids:
+        for stage_focus_id in stage_focus_ids:
+            stage_focuses.append(stage_focus_dict.get(stage_focus_id, 'None'))
 
+    # Get Sector Focus
+    sector_focus = cell_values.get('fldAodaUWkwpSTq4G')
 
-
-
+    # Get Current Funding
+    current_fund = cell_values.get('fldw5XW3xV0VzXP0j')
+    # Get Year fund closed
+    year_fund_closed = cell_values.get('fldZzIdZyZ380oWH2')
     # Create Investor dataclass and add it to
-    Investor_item = Investor(name, website, hq_location, offices)
+    Investor_item = Investor(name, website, hq_location, sector_focus, current_fund, offices, types, stage_focuses)
     investors.append(Investor_item)
 
-print(investors)
+investors_dicts = [asdict(investor) for investor in investors]
+
+df = pd.DataFrame(investors_dicts)
+
+df.to_csv('Investor.csv')
